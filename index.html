@@ -1,128 +1,167 @@
 <!doctype html>
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Putar Video Google Drive</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Player Google Drive Dinamis</title>
   <style>
     body {
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      margin: 0;
-      padding: 20px;
+      margin: 0; padding: 20px;
       background: #f4f6f8;
       color: #111;
       display: flex;
-      gap: 20px;
       flex-direction: column;
       align-items: center;
     }
-    .player-wrap {
+    h1 { margin-bottom: 12px; }
+    .player {
       width: 100%;
       max-width: 900px;
-      background: white;
+      background: #fff;
       border-radius: 12px;
       box-shadow: 0 6px 20px rgba(0,0,0,0.08);
       overflow: hidden;
+      margin-bottom: 20px;
     }
-    /* responsive iframe (16:9) */
     .iframe-ratio {
       position: relative;
       width: 100%;
-      padding-top: 56.25%; /* 16:9 */
+      padding-top: 56.25%;
     }
-    .iframe-ratio iframe {
+    iframe {
       position: absolute;
       top: 0; left: 0;
-      width: 100%;
-      height: 100%;
+      width: 100%; height: 100%;
       border: 0;
     }
-
-    .actions {
-      display: flex;
-      gap: 10px;
-      padding: 12px;
-      align-items: center;
-      justify-content: space-between;
+    select {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      width: 300px;
     }
-    .left {
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+      width: 100%;
+      max-width: 400px;
+    }
+    input {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
       font-size: 14px;
     }
-    .right {
-      display: flex;
-      gap: 8px;
-    }
-    button, a.button {
+    button {
+      padding: 10px;
       border: 0;
-      padding: 8px 12px;
       border-radius: 8px;
-      cursor: pointer;
       background: #2b6ef6;
       color: white;
-      text-decoration: none;
       font-weight: 600;
-      font-size: 14px;
-    }
-    a.alt {
-      background: #e6e9ef;
-      color: #111;
-      font-weight: 600;
-    }
-    small.note {
-      color: #666;
-      display: block;
-      margin-top: 8px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-  <h1>Putar video dari Google Drive</h1>
+  <h1>Google Drive Video Player</h1>
 
-  <div class="player-wrap">
+  <!-- Pemutar video -->
+  <div class="player">
     <div class="iframe-ratio">
-      <!-- Ganti FILE_ID dengan id file Google Drivemu -->
-      <iframe
-        id="gdrive-player"
-        src="https://drive.google.com/file/d/1Pfffdt4d11Vh1cNJx3MbrJraFc2KT791/preview"
-        allow="autoplay; fullscreen; picture-in-picture"
-        allowfullscreen>
-      </iframe>
-    </div>
-
-    <div class="actions">
-      <div class="left">
-        <strong>File dari Google Drive</strong>
-        <div><small class="note">Pastikan file dibagikan (Anyone with the link can view)</small></div>
-      </div>
-
-      <div class="right">
-        <!-- buka iframe di tab baru -->
-        <a class="button" id="open-new" target="_blank" rel="noopener"
-           href="https://drive.google.com/file/d/1Pfffdt4d11Vh1cNJx3MbrJraFc2KT791/preview">
-           Buka di Tab Baru
-        </a>
-
-        <!-- link download langsung (jika sharing izinkan download) -->
-        <a class="button alt" id="dl" href="https://drive.google.com/uc?export=download&id=1Pfffdt4d11Vh1cNJx3MbrJraFc2KT791">
-          Download
-        </a>
-      </div>
+      <iframe id="video-frame" src="" allow="autoplay; fullscreen" allowfullscreen></iframe>
     </div>
   </div>
 
+  <!-- Pilih video dari daftar -->
+  <select id="video-list"></select>
+
+  <hr style="width:100%; max-width:900px; margin:30px 0;">
+
+  <!-- Form tambah video -->
+  <form id="add-video-form">
+    <h3>Tambah Video Baru</h3>
+    <input type="text" id="video-title" placeholder="Judul video" required>
+    <input type="text" id="video-link" placeholder="Link Google Drive (contoh: https://drive.google.com/file/d/ID/view)" required>
+    <button type="submit">Tambah</button>
+  </form>
+
   <script>
-    // Script kecil: kalau perlu, kita bisa ganti src iframe ke mode preview/drive viewer
-    // Tidak perlu diubah kalau sudah pakai link preview di atas.
-    (function(){
-      // contoh: deteksi jika iframe gagal (contoh: permission denied), tampilkan pesan
-      const iframe = document.getElementById('gdrive-player');
-      iframe.addEventListener('load', () => {
-        // jika file tidak bisa diputar karena permission, alamat preview kadang menampilkan halaman login
-        // kita bisa cek dokumen referrer atau panjang konten, tapi ini cukup sederhana:
-        console.log('iframe loaded (may still require Drive permission).');
+    // --- Data awal (bisa juga diambil dari file JSON eksternal) ---
+    let videoData = [
+      {
+        title: "Contoh Video 1",
+        link: "https://drive.google.com/file/d/1Pfffdt4d11Vh1cNJx3MbrJraFc2KT791/view"
+      }
+    ];
+
+    const select = document.getElementById("video-list");
+    const iframe = document.getElementById("video-frame");
+
+    // Fungsi untuk ambil file ID dari link Google Drive
+    function extractFileId(url) {
+      const match = url.match(/\/d\/([^/]+)\//);
+      return match ? match[1] : null;
+    }
+
+    // Render daftar video ke dropdown
+    function renderList() {
+      select.innerHTML = "";
+      videoData.forEach((vid, idx) => {
+        const opt = document.createElement("option");
+        opt.value = idx;
+        opt.textContent = vid.title;
+        select.appendChild(opt);
       });
-    })();
+      if (videoData.length > 0) {
+        select.selectedIndex = 0;
+        loadVideo(0);
+      }
+    }
+
+    // Load video ke iframe
+    function loadVideo(index) {
+      const fileId = extractFileId(videoData[index].link);
+      if (fileId) {
+        iframe.src = `https://drive.google.com/file/d/${fileId}/preview`;
+      } else {
+        alert("Link tidak valid!");
+      }
+    }
+
+    // Event saat ganti pilihan
+    select.addEventListener("change", () => {
+      loadVideo(select.value);
+    });
+
+    // --- Tambah video baru ---
+    const form = document.getElementById("add-video-form");
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const title = document.getElementById("video-title").value.trim();
+      const link = document.getElementById("video-link").value.trim();
+
+      if (!extractFileId(link)) {
+        alert("Link Google Drive tidak valid!");
+        return;
+      }
+
+      videoData.push({ title, link });
+      renderList();
+      form.reset();
+      alert("Video berhasil ditambahkan!");
+    });
+
+    // Inisialisasi
+    renderList();
   </script>
 
 </body>
