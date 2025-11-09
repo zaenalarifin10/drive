@@ -34,25 +34,25 @@
     <button type="submit">Simpan ke Firebase</button>
   </form>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js"></script>
+  <!-- Firebase Modular SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getDatabase, ref, onValue, push, get } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
 
-  <script>
-    // 🔧 Ganti dengan konfigurasi project kamu!
+    // 🔧 Konfigurasi Firebase kamu
     const firebaseConfig = {
-  apiKey: "AIzaSyD6aeag8u1_b3tDyXjVraLbUnZIrWA38_8",
-  authDomain: "drive-2b34f.firebaseapp.com",
-  databaseURL: "https://drive-2b34f-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "drive-2b34f",
-  storageBucket: "drive-2b34f.firebasestorage.app",
-  messagingSenderId: "80090601067",
-  appId: "1:80090601067:web:6b39888734ac5a378e032e"
-};
+      apiKey: "AIzaSyD6aeag8u1_b3tDyXjVraLbUnZIrWA38_8",
+      authDomain: "drive-2b34f.firebaseapp.com",
+      databaseURL: "https://drive-2b34f-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "drive-2b34f",
+      storageBucket: "drive-2b34f.firebasestorage.app",
+      messagingSenderId: "80090601067",
+      appId: "1:80090601067:web:6b39888734ac5a378e032e"
+    };
 
-    // Inisialisasi Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.database(app);
+    // 🚀 Inisialisasi Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
     const select = document.getElementById('video-list');
     const iframe = document.getElementById('video-frame');
@@ -64,12 +64,10 @@
       return match ? match[1] : null;
     }
 
-    // tampilkan video
     function loadVideo(fileId) {
       iframe.src = `https://drive.google.com/file/d/${fileId}/preview`;
     }
 
-    // render dropdown
     function renderList(videos) {
       select.innerHTML = '';
       for (const [key, vid] of Object.entries(videos)) {
@@ -84,31 +82,32 @@
       }
     }
 
-    // realtime listener Firebase
-    firebase.database().ref('videos').on('value', snapshot => {
+    // 🔄 Realtime listener
+    const videosRef = ref(db, 'videos');
+    onValue(videosRef, (snapshot) => {
       const data = snapshot.val() || {};
       renderList(data);
     });
 
-    // saat pilih video lain
+    // 🔁 Ganti video saat user memilih
     select.addEventListener('change', async () => {
       const key = select.value;
-      const snapshot = await firebase.database().ref('videos/' + key).get();
+      const snapshot = await get(ref(db, 'videos/' + key));
       const vid = snapshot.val();
       loadVideo(extractFileId(vid.link));
     });
 
-    // tambah video baru
-    form.addEventListener('submit', e => {
+    // ➕ Tambah video baru
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const title = document.getElementById('title').value.trim();
       const link = document.getElementById('link').value.trim();
       if (!extractFileId(link)) return alert('Link Drive tidak valid!');
 
-      firebase.database().ref('videos').push({ title, link });
+      await push(videosRef, { title, link });
       form.reset();
-      alert('Video berhasil disimpan ke Firebase!');
+      alert('✅ Video berhasil disimpan ke Firebase!');
     });
   </script>
 </body>
-    </html>
+  </html>
