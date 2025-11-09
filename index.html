@@ -1,168 +1,114 @@
 <!doctype html>
 <html lang="id">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Player Google Drive Dinamis</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Firebase Google Drive Player</title>
   <style>
-    body {
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      margin: 0; padding: 20px;
-      background: #f4f6f8;
-      color: #111;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    h1 { margin-bottom: 12px; }
-    .player {
-      width: 100%;
-      max-width: 900px;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-      overflow: hidden;
-      margin-bottom: 20px;
-    }
-    .iframe-ratio {
-      position: relative;
-      width: 100%;
-      padding-top: 56.25%;
-    }
-    iframe {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      border: 0;
-    }
-    select {
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 14px;
-      width: 300px;
-    }
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
-      width: 100%;
-      max-width: 400px;
-    }
-    input {
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 14px;
-    }
-    button {
-      padding: 10px;
-      border: 0;
-      border-radius: 8px;
-      background: #2b6ef6;
-      color: white;
-      font-weight: 600;
-      cursor: pointer;
-    }
+    body { font-family: system-ui; background:#f4f6f8; padding:20px; text-align:center; }
+    .player { max-width:900px; margin:0 auto 20px; background:white; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); overflow:hidden; }
+    .iframe-ratio { position:relative; width:100%; padding-top:56.25%; }
+    iframe { position:absolute; top:0; left:0; width:100%; height:100%; border:0; }
+    select { padding:8px; margin:10px; border-radius:8px; border:1px solid #ccc; }
+    form { margin:20px auto; max-width:400px; display:flex; flex-direction:column; gap:10px; background:white; padding:20px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+    input, button { padding:10px; border-radius:8px; border:1px solid #ccc; }
+    button { background:#2b6ef6; color:white; font-weight:bold; cursor:pointer; border:0; }
   </style>
 </head>
 <body>
 
-  <h1>Google Drive Video Player</h1>
+  <h1>🔥 Google Drive Player (Firebase)</h1>
 
-  <!-- Pemutar video -->
   <div class="player">
     <div class="iframe-ratio">
-      <iframe id="video-frame" src="" allow="autoplay; fullscreen" allowfullscreen></iframe>
+      <iframe id="video-frame" src="" allowfullscreen></iframe>
     </div>
   </div>
 
-  <!-- Pilih video dari daftar -->
   <select id="video-list"></select>
 
-  <hr style="width:100%; max-width:900px; margin:30px 0;">
-
-  <!-- Form tambah video -->
   <form id="add-video-form">
-    <h3>Tambah Video Baru</h3>
-    <input type="text" id="video-title" placeholder="Judul video" required>
-    <input type="text" id="video-link" placeholder="Link Google Drive (contoh: https://drive.google.com/file/d/ID/view)" required>
-    <button type="submit">Tambah</button>
+    <h3>Tambah Video</h3>
+    <input id="title" placeholder="Judul video" required />
+    <input id="link" placeholder="Link Google Drive" required />
+    <button type="submit">Simpan ke Firebase</button>
   </form>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js"></script>
+
   <script>
-    // --- Data awal (bisa juga diambil dari file JSON eksternal) ---
-    let videoData = [
-      {
-        title: "Contoh Video 1",
-        link: "https://drive.google.com/file/d/1Pfffdt4d11Vh1cNJx3MbrJraFc2KT791/view"
-      }
-    ];
+    // 🔧 Ganti dengan konfigurasi project kamu!
+    const firebaseConfig = {
+  apiKey: "AIzaSyD6aeag8u1_b3tDyXjVraLbUnZIrWA38_8",
+  authDomain: "drive-2b34f.firebaseapp.com",
+  databaseURL: "https://drive-2b34f-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "drive-2b34f",
+  storageBucket: "drive-2b34f.firebasestorage.app",
+  messagingSenderId: "80090601067",
+  appId: "1:80090601067:web:6b39888734ac5a378e032e"
+};
 
-    const select = document.getElementById("video-list");
-    const iframe = document.getElementById("video-frame");
+    // Inisialisasi Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database(app);
 
-    // Fungsi untuk ambil file ID dari link Google Drive
+    const select = document.getElementById('video-list');
+    const iframe = document.getElementById('video-frame');
+    const form = document.getElementById('add-video-form');
+
+    // ambil file ID dari link drive
     function extractFileId(url) {
       const match = url.match(/\/d\/([^/]+)\//);
       return match ? match[1] : null;
     }
 
-    // Render daftar video ke dropdown
-    function renderList() {
-      select.innerHTML = "";
-      videoData.forEach((vid, idx) => {
-        const opt = document.createElement("option");
-        opt.value = idx;
+    // tampilkan video
+    function loadVideo(fileId) {
+      iframe.src = `https://drive.google.com/file/d/${fileId}/preview`;
+    }
+
+    // render dropdown
+    function renderList(videos) {
+      select.innerHTML = '';
+      for (const [key, vid] of Object.entries(videos)) {
+        const opt = document.createElement('option');
+        opt.value = key;
         opt.textContent = vid.title;
         select.appendChild(opt);
-      });
-      if (videoData.length > 0) {
-        select.selectedIndex = 0;
-        loadVideo(0);
+      }
+      if (Object.keys(videos).length > 0) {
+        const first = Object.keys(videos)[0];
+        loadVideo(extractFileId(videos[first].link));
       }
     }
 
-    // Load video ke iframe
-    function loadVideo(index) {
-      const fileId = extractFileId(videoData[index].link);
-      if (fileId) {
-        iframe.src = `https://drive.google.com/file/d/${fileId}/preview`;
-      } else {
-        alert("Link tidak valid!");
-      }
-    }
-
-    // Event saat ganti pilihan
-    select.addEventListener("change", () => {
-      loadVideo(select.value);
+    // realtime listener Firebase
+    firebase.database().ref('videos').on('value', snapshot => {
+      const data = snapshot.val() || {};
+      renderList(data);
     });
 
-    // --- Tambah video baru ---
-    const form = document.getElementById("add-video-form");
-    form.addEventListener("submit", (e) => {
+    // saat pilih video lain
+    select.addEventListener('change', async () => {
+      const key = select.value;
+      const snapshot = await firebase.database().ref('videos/' + key).get();
+      const vid = snapshot.val();
+      loadVideo(extractFileId(vid.link));
+    });
+
+    // tambah video baru
+    form.addEventListener('submit', e => {
       e.preventDefault();
-      const title = document.getElementById("video-title").value.trim();
-      const link = document.getElementById("video-link").value.trim();
+      const title = document.getElementById('title').value.trim();
+      const link = document.getElementById('link').value.trim();
+      if (!extractFileId(link)) return alert('Link Drive tidak valid!');
 
-      if (!extractFileId(link)) {
-        alert("Link Google Drive tidak valid!");
-        return;
-      }
-
-      videoData.push({ title, link });
-      renderList();
+      firebase.database().ref('videos').push({ title, link });
       form.reset();
-      alert("Video berhasil ditambahkan!");
+      alert('Video berhasil disimpan ke Firebase!');
     });
-
-    // Inisialisasi
-    renderList();
   </script>
-
 </body>
-</html>
+    </html>
